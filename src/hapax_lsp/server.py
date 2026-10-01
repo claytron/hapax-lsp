@@ -12,16 +12,18 @@ from . import features
 
 class HapaxServer(LanguageServer):
     fw = LATEST
-    warn = True
+    warn = bool(config.load().get("warn", True))
 
 
 server = HapaxServer("hapax-lsp", "0.1.0", text_document_sync_kind=t.TextDocumentSyncKind.Full)
 
 
 def configure(ls: HapaxServer, options) -> None:
-    options = options or {}
+    options = options if isinstance(options, dict) else {}
     options = options.get("hapax", options)  # didChangeConfiguration nests settings under "hapax"
-    ls.warn = bool(options.get("warn", config.load().get("warn", True)))
+    options = options if isinstance(options, dict) else {}
+    if "warn" in options:
+        ls.warn = bool(options["warn"])
     if "fw" in options:
         try:
             ls.fw = parse_fw(str(options["fw"]))

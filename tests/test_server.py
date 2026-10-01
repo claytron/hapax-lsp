@@ -34,6 +34,20 @@ def test_configure_accepts_no_options():
     assert ls.fw == (3, 21)
 
 
+def test_configure_ignores_options_that_are_not_objects():
+    for options in ({"hapax": None}, "3.21", ["x"]):
+        ls = FakeServer()
+        configure(ls, options)
+        assert ls.fw == (3, 21)
+
+
+def test_configure_keeps_warn_when_a_push_omits_it():
+    ls = FakeServer()
+    configure(ls, {"warn": False})
+    configure(ls, {"hapax": {"fw": "3.21"}})
+    assert ls.warn is False
+
+
 async def session():
     client = LanguageClient("test", "0")
     published = asyncio.get_running_loop().create_future()
