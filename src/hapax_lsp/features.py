@@ -136,3 +136,16 @@ def _gated(labels: list[str], floor: tuple[int, int], fw) -> list[t.CompletionIt
 
 def _item(label: str, detail: str | None = None) -> t.CompletionItem:
     return t.CompletionItem(label=label, detail=detail)
+
+
+def fix_all(text: str, uri: str, fw=LATEST) -> t.CodeAction | None:
+    fixed, applied = fix(text, fw)
+    if fixed == text:
+        return None
+    lines = text.split("\n")
+    whole = t.Range(t.Position(0, 0), t.Position(len(lines) - 1, len(lines[-1])))
+    return t.CodeAction(
+        title=f"Hapax: fix all ({len(applied)} {'repair' if len(applied) == 1 else 'repairs'})",
+        kind=t.CodeActionKind.QuickFix,
+        edit=t.WorkspaceEdit(changes={uri: [t.TextEdit(whole, fixed)]}),
+    )

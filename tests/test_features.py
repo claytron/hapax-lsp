@@ -1,6 +1,6 @@
 from lsprotocol import types as t
 
-from hapax_lsp.features import TOKEN_TYPES, completion, diagnostics, semantic_tokens
+from hapax_lsp.features import TOKEN_TYPES, completion, diagnostics, fix_all, semantic_tokens
 
 
 def decode(data):
@@ -162,3 +162,19 @@ def test_nothing_inside_a_comment():
 
 def test_cursor_past_the_last_line_is_safe():
     assert completion("TYPE POLY", 5, 0) is not None
+
+
+# Fix all
+
+
+def test_fix_all_replaces_the_document():
+    text = "[CC]\n74 Café\n[/CC]"
+    action = fix_all(text, "file:///x.txt")
+    [edit] = action.edit.changes["file:///x.txt"]
+    assert edit.range == t.Range(t.Position(0, 0), t.Position(2, 5))
+    assert edit.new_text == "[CC]\n74 Cafe\n[/CC]"
+    assert action.title == "Hapax: fix all (1 repair)"
+
+
+def test_no_fix_action_for_a_clean_file():
+    assert fix_all("VERSION 1\n", "file:///x.txt") is None
