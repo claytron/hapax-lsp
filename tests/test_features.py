@@ -1,6 +1,16 @@
 from lsprotocol import types as t
 
-from hapax_lsp.features import diagnostics
+from hapax_lsp.features import TOKEN_TYPES, diagnostics, semantic_tokens
+
+
+def decode(data):
+    """Semantic token data back to absolute (line, col, length, type) tuples."""
+    out, line, col = [], 0, 0
+    for i in range(0, len(data), 5):
+        dl, dc, length, kind, _ = data[i : i + 5]
+        line, col = line + dl, (col + dc if dl == 0 else dc)
+        out.append((line, col, length, TOKEN_TYPES[kind]))
+    return out
 
 
 # Diagnostics
@@ -43,3 +53,53 @@ def test_warn_false_drops_warnings_but_keeps_errors():
 def test_unparseable_line_still_reports():
     [d] = diagnostics("[CC]\nnot a cc\n[/CC]\n")
     assert d.code == "syntax"
+
+
+# Semantic tokens
+
+
+def test_tokens_for_directives_sections_entries_and_comments():
+    text = "TYPE POLY # synth\nOUTCHAN 3\n[CC]\n74:DEFAULT=64 Cutoff\n[/CC]\n"
+    assert decode(semantic_tokens(text)) == [
+        (0, 0, 4, "keyword"),
+        (0, 5, 4, "enumMember"),
+        (0, 10, 7, "comment"),
+        (1, 0, 7, "keyword"),
+        (1, 8, 1, "number"),
+        (2, 0, 4, "namespace"),
+        (3, 0, 2, "number"),
+        (3, 3, 8, "keyword"),
+        (3, 11, 2, "number"),
+        (3, 14, 6, "string"),
+        (4, 0, 5, "namespace"),
+    ]
+
+
+def test_tokens_for_trackname_null_and_targets():
+    text = "TRACKNAME Peak\nOUTPORT NULL\n[ASSIGN]\n1 CC:74 DEFAULT=100\n[/ASSIGN]\n"
+    assert decode(semantic_tokens(text)) == [
+        (0, 0, 9, "keyword"),
+        (0, 10, 4, "string"),
+        (1, 0, 7, "keyword"),
+        (1, 8, 4, "keyword"),
+        (2, 0, 8, "namespace"),
+        (3, 0, 1, "number"),
+        (3, 2, 3, "keyword"),
+        (3, 5, 2, "number"),
+        (3, 8, 8, "keyword"),
+        (3, 16, 3, "number"),
+        (4, 0, 9, "namespace"),
+    ]
+
+
+def test_comment_section_lines_are_strings():
+    assert decode(semantic_tokens("[COMMENT]\nHello there\n[/COMMENT]\n"))[1] == (1, 0, 11, "string")
+
+
+def test_bad_line_gets_only_its_comment():
+    assert decode(semantic_tokens("[CC]\nnot a cc # oops\n[/CC]\n"))[1] == (1, 9, 6, "comment")
+
+
+def test_crlf_line_endings_tokenize_like_lf():
+    assert semantic_tokens("TYPE POLY # x\r\n[CC]\r\n74 Cutoff\r\n[/CC]\r\n") == semantic_tokens(
+        "TYPE POLY # x\n[CC]\n74 Cutoff\n[/CC]\n")
