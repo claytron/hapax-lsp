@@ -13,6 +13,7 @@ TOKEN_TYPES = ["keyword", "enumMember", "number", "string", "namespace", "commen
 _HEADER = re.compile(r"[ \t]*(\[/?[^\]]*\])")
 _NUMBER = re.compile(r"-?[0-9]+(\.[0-9]+)?V?", re.I)
 _DEFAULT = "DEFAULT="
+_TARGETS = ["CC:", "NRPN:", "CC_PAIR:", "CV:", "PB", "AT"]
 
 
 def diagnostics(text: str, fw=LATEST, file_name: str | None = None, warn: bool = True) -> list[t.Diagnostic]:
@@ -68,3 +69,70 @@ def _encode(tokens) -> list[int]:
         data += [line - prev_line, delta, end - start, TOKEN_TYPES.index(kind), 0]
         prev_line, prev_start = line, start
     return data
+
+
+def completion(text: str, line: int, character: int, fw=LATEST) -> list[t.CompletionItem]:
+    lines = text.split("\n")
+    before = lines[line][:character] if line < len(lines) else ""
+    if "#" in before:
+        return []
+    stripped = before.lstrip(" \t")
+    words = stripped.split()
+    trailing = before[-1:] in (" ", "\t")
+    # index of the word under the cursor; a trailing space starts the next one
+    at = len(words) if trailing or not words else len(words) - 1
+    section = _section_at(parse(text), line + 1)
+
+    if stripped.startswith("[/"):
+        return [_item(f"{section}]")] if section else []
+    if stripped.startswith("["):
+        return [_item(f"{s}]") for s in sorted(SECTIONS)]
+    if section is None:
+        if at == 0:
+            return [_item(d) for d in sorted(DIRECTIVES)] + [_item(f"[{s}]") for s in sorted(SECTIONS)]
+        if at == 1:
+            return _values(words[0].upper(), fw)
+    elif section in ("ASSIGN", "AUTOMATION"):
+        target = 1 if section == "ASSIGN" else 0
+        if at == target:
+            return [_item(x) for x in _TARGETS + (["NULL"] if section == "ASSIGN" else [])]
+        if at > target:
+            return [_item(_DEFAULT)]
+    return []
+
+
+def _section_at(doc, n: int) -> str | None:
+    """The section open at 1-based line n."""
+    for s in reversed(doc.sections):
+        if s.start < n:
+            return s.name if s.end is None or n < s.end else None
+    return None
+
+
+def _values(key: str, fw) -> list[t.CompletionItem]:
+    virtual = [f"{p}{x}" for p in ("USBD", "USBH") for x in range(1, 17)]
+    channels = [_item(str(c)) for c in range(1, 17)] + [_item("NULL")]
+    match key:
+        case "VERSION":
+            return [_item("1")]
+        case "TYPE":
+            return [_item(x) for x in sorted(TYPES)] + _gated(sorted(TYPES_3_20), (3, 20), fw)
+        case "OUTPORT":
+            return [_item(x) for x in sorted(OUTPORTS)] + _gated(virtual, (3, 0), fw)
+        case "INPORT":
+            return [_item(x) for x in sorted(INPORTS)] + _gated(virtual, (3, 0), fw)
+        case "OUTCHAN":
+            return channels
+        case "INCHAN":
+            return channels + [_item("ALL")]
+        case "MAXRATE":
+            return [_item(str(r)) for r in sorted(MAXRATES, reverse=True)] + [_item("NULL")]
+    return []
+
+
+def _gated(labels: list[str], floor: tuple[int, int], fw) -> list[t.CompletionItem]:
+    return [_item(x, f"from {floor[0]}.{floor[1]:02}") for x in labels] if fw >= floor else []
+
+
+def _item(label: str, detail: str | None = None) -> t.CompletionItem:
+    return t.CompletionItem(label=label, detail=detail)

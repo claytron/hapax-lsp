@@ -1,6 +1,6 @@
 from lsprotocol import types as t
 
-from hapax_lsp.features import TOKEN_TYPES, diagnostics, semantic_tokens
+from hapax_lsp.features import TOKEN_TYPES, completion, diagnostics, semantic_tokens
 
 
 def decode(data):
@@ -11,6 +11,10 @@ def decode(data):
         line, col = line + dl, (col + dc if dl == 0 else dc)
         out.append((line, col, length, TOKEN_TYPES[kind]))
     return out
+
+
+def labels(items):
+    return [i.label for i in items]
 
 
 # Diagnostics
@@ -103,3 +107,58 @@ def test_bad_line_gets_only_its_comment():
 def test_crlf_line_endings_tokenize_like_lf():
     assert semantic_tokens("TYPE POLY # x\r\n[CC]\r\n74 Cutoff\r\n[/CC]\r\n") == semantic_tokens(
         "TYPE POLY # x\n[CC]\n74 Cutoff\n[/CC]\n")
+
+
+# Completion
+
+
+def test_directive_keys_and_section_openers_at_top_level():
+    got = labels(completion("TY", 0, 2))
+    assert "TYPE" in got and "[CC]" in got
+
+
+def test_directive_values_follow_firmware():
+    assert "POLYAT" in labels(completion("TYPE ", 0, 5, fw=(3, 21)))
+    assert "POLYAT" not in labels(completion("TYPE ", 0, 5, fw=(3, 10)))
+    assert "USBD16" in labels(completion("OUTPORT ", 0, 8))
+    assert "USBD16" not in labels(completion("OUTPORT ", 0, 8, fw=(2, 21)))
+    assert "ALL" in labels(completion("INCHAN ", 0, 7))
+    assert "ALL" not in labels(completion("OUTCHAN ", 0, 8))
+
+
+def test_gated_values_name_their_firmware():
+    [item] = [i for i in completion("TYPE ", 0, 5) if i.label == "AFTR"]
+    assert item.detail == "from 3.20"
+
+
+def test_section_names_after_bracket():
+    assert "DRUMLANES]" in labels(completion("[", 0, 1))
+
+
+def test_closing_bracket_closes_the_open_section():
+    assert labels(completion("[CC]\n74 Cutoff\n[/", 2, 2)) == ["CC]"]
+
+
+def test_assign_targets_after_pot_include_null():
+    got = labels(completion("[ASSIGN]\n1 \n[/ASSIGN]\n", 1, 2))
+    assert got == ["CC:", "NRPN:", "CC_PAIR:", "CV:", "PB", "AT", "NULL"]
+
+
+def test_automation_targets_exclude_null():
+    assert "NULL" not in labels(completion("[AUTOMATION]\n\n[/AUTOMATION]\n", 1, 0))
+
+
+def test_default_after_target():
+    assert labels(completion("[AUTOMATION]\nCC:74 \n[/AUTOMATION]\n", 1, 6)) == ["DEFAULT="]
+
+
+def test_completion_in_unclosed_section_at_end_of_file():
+    assert labels(completion("[AUTOMATION]\nCC:74 ", 1, 6)) == ["DEFAULT="]
+
+
+def test_nothing_inside_a_comment():
+    assert completion("# TY", 0, 4) == []
+
+
+def test_cursor_past_the_last_line_is_safe():
+    assert completion("TYPE POLY", 5, 0) is not None
