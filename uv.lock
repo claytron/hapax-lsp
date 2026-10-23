@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.13"
 
 [[package]]
@@ -49,7 +49,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "hapax-tui", git = "https://github.com/claytron/hapax-tui" },
+    { name = "hapax-tui", specifier = ">=0.1.1" },
     { name = "pygls", specifier = ">=2.1" },
 ]
 
@@ -58,11 +58,15 @@ dev = [{ name = "pytest", specifier = ">=8" }]
 
 [[package]]
 name = "hapax-tui"
-version = "0.1.0"
-source = { git = "https://github.com/claytron/hapax-tui#6dbb2e960d393b450e1ba73dd1023a4af2b91eec" }
+version = "0.1.1"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "lark" },
     { name = "textual" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/35/7f/936d790ed178423a670f3898662b0981e0f948e34e906a0327aeec1ccde9/hapax_tui-0.1.1.tar.gz", hash = "sha256:edadff8c94e7a9233e66b9d44a418e67605502d5c464e9a1509784b4b1b7bfa4", size = 232268, upload-time = "2026-10-23T22:13:48.593Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0f/1a/ce9d19fbe5ece4328445b57a601d0b6ac45f07e8af51f8af975a2af0fd07/hapax_tui-0.1.1-py3-none-any.whl", hash = "sha256:bf803beedf2e1ed8c642046284ef3a21660929f47ba86eae9ec061693f1557c7", size = 37234, upload-time = "2026-10-23T22:13:47.292Z" },
 ]
 
 [[package]]
