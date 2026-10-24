@@ -1,12 +1,14 @@
 # hapax-lsp
 
-A language server for Squarp Hapax instrument definitions: diagnostics, highlighting, completion and a fix-all action, in any editor with an LSP client.
+A language server for [Squarp Hapax](https://squarp.net/hapax/) instrument definitions: diagnostics, highlighting, completion and a fix-all action, in any editor with an LSP client.
 Validation comes from [hapax-tui](https://github.com/claytron/hapax-tui), so the editor reports exactly what `hapax validate` reports.
 
 ## Install
 
+Requires Python 3.13+.
+
 ```sh
-uv tool install git+https://github.com/claytron/hapax-lsp
+uv tool install hapax-lsp
 ```
 
 This puts `hapax-lsp` on your `PATH`; it speaks LSP over stdio.
@@ -22,14 +24,14 @@ Send them as `initializationOptions`, or as `workspace/didChangeConfiguration` s
 
 ## Neovim (0.11+)
 
-Add the bundled runtime directory and enable the server:
+The runtime files aren't part of the Python package, so clone this repo (or let your plugin manager fetch it), add its `editors/nvim` directory and enable the server:
 
 ```lua
 vim.opt.runtimepath:append("/path/to/hapax-lsp/editors/nvim")
 vim.lsp.enable("hapax")
 ```
 
-Instrument definitions are `.txt` files, so `ftdetect/hapax.lua` marks a `.txt` buffer as `hapax` when its first non-comment line is a directive (`VERSION`, `TRACKNAME`, `TYPE`, ...) or a section header.
+Instrument definitions are `.txt` files, so `ftdetect/hapax.lua` marks a `.txt` buffer as `hapax` when its first non-comment line is a whole directive (`VERSION 1`, `TRACKNAME My Synth`, `TYPE POLY`, ...) or a section header like `[CC]`.
 Other `.txt` files stay `text`.
 Highlighting comes from semantic tokens, linked to your colour scheme's `@lsp.type.*` groups.
 Run the fix-all action with `vim.lsp.buf.code_action()`.
