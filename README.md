@@ -24,11 +24,11 @@ Send them as `initializationOptions`, or as `workspace/didChangeConfiguration` s
 
 ## Neovim (0.11+)
 
-The runtime files aren't part of the Python package, so clone this repo (or let your plugin manager fetch it), add its `editors/nvim` directory and enable the server:
+This repo is also a Neovim plugin.
+Install it with your plugin manager and enable the server, for example with lazy.nvim:
 
 ```lua
-vim.opt.runtimepath:append("/path/to/hapax-lsp/editors/nvim")
-vim.lsp.enable("hapax")
+{ "claytron/hapax-lsp", config = function() vim.lsp.enable("hapax") end }
 ```
 
 Instrument definitions are `.txt` files, so `ftdetect/hapax.lua` marks a `.txt` buffer as `hapax` when its first non-comment line is a whole directive (`VERSION 1`, `TRACKNAME My Synth`, `TYPE POLY`, ...) or a section header like `[CC]`.
