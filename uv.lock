@@ -35,7 +35,7 @@ wheels = [
 
 [[package]]
 name = "hapax-lsp"
-version = "0.1.1"
+version = "0.1.2"
 source = { editable = "." }
 dependencies = [
     { name = "hapax-tui" },
