@@ -1,6 +1,6 @@
 [project]
 name = "hapax-lsp"
-version = "0.1.0"
+version = "0.1.1"
 description = "Language server for Squarp Hapax instrument definitions"
 requires-python = ">=3.13"
 readme = "README.md"
